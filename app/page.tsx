@@ -48,7 +48,7 @@ export default function HeroSectionOne() {
           transition={{ duration: 0.3, delay: 1 }}
           className="mx-auto mt-6 max-w-2xl text-center text-lg text-neutral-600 dark:text-neutral-400"
         >
-          FroshAi lets you speak directly with an AI — just like a phone call. Describe your symptoms and get helpful, real-time responses based on real medical knowledge. It’s built for ease, speed, and privacy — no waiting rooms, no guesswork.
+          FroshAi lets you speak directly with an AI—just like a phone call. Describe your symptoms and get helpful, real-time responses based on real medical knowledge. It’s built for ease, speed, and privacy — no waiting rooms, no guesswork.
         </motion.p>
 
         <motion.div
