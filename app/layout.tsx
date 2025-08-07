@@ -21,8 +21,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AfriMedAssist",
-  description: "AfriMedAssist is Nigeria’s first AI medical assistant that lets you speak directly with an intelligent voice-based system. Describe your symptoms naturally and get fast, accurate medical guidance anytime, anywhere. No waiting rooms, just real-time help tailored for Nigerians. Safe, private, and always available.",
+  title: "FroshAi",
+  description: "FroshAi is Nigeria’s first AI medical assistant that lets you speak directly with an intelligent voice-based system. Describe your symptoms naturally and get fast, accurate medical guidance anytime, anywhere. No waiting rooms, just real-time help tailored for Nigerians. Safe, private, and always available.",
 };
 
 export default function RootLayout({
