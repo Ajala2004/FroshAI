@@ -1,24 +1,19 @@
- 'use client';
+'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import Vapi from '@vapi-ai/web';
 
 type Doctor = { name: string; specialty: string; avatar: string; assistantId: string };
-
-const doctor: Doctor = {
-  name: 'Dr. Frosh',
-  specialty: 'Virtual Health Assistant',
-  avatar: 'https://i.pravatar.cc/150?img=8',
-  assistantId: process.env.NEXT_PUBLIC_ASSISTANT_ID   as string,
-};
+const doctor: Doctor = { name: 'Dr. Frosh', specialty: 'Virtual Health Assistant',
+   avatar: 'https://i.pravatar.cc/150?img=8', assistantId: process.env.NEXT_PUBLIC_ASSISTANT_ID  as string };
 
 export default function Dashboard() {
   const [status, setStatus] = useState<'Idle' | 'Connecting' | 'Connected' | 'Disconnected'>('Idle');
   const [transcripts, setTranscripts] = useState<string[]>([]);
-  const [startTime, setStartTime] = useState<number | null>(null);
   const [duration, setDuration] = useState('00:00');
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timer = useRef<NodeJS.Timeout | null>(null);
   const vapiRef = useRef<any>(null);
+  const startTimeRef = useRef<number>(0);
 
   useEffect(() => {
     const v = new Vapi(process.env.NEXT_PUBLIC_VAPI_API_KEY as string);
@@ -26,30 +21,18 @@ export default function Dashboard() {
 
     v.on('call-start', () => {
       setStatus('Connected');
-      const now = Date.now();
-      setStartTime(now);
-      timerRef.current = setInterval(() => {
-        const diff = Date.now() - now;
-        const m = String(Math.floor(diff / 60000)).padStart(2, '0');
-        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-        setDuration(`${m}:${s}`);
+      startTimeRef.current = Date.now();
+      timer.current = setInterval(() => {
+        const diff = Date.now() - startTimeRef.current;
+        setDuration(`${String(Math.floor(diff / 60000)).padStart(2,'0')}:${String(Math.floor((diff % 60000)/1000)).padStart(2,'0')}`);
       }, 1000);
     });
 
-    v.on('call-end', () => {
-      setStatus('Disconnected');
-      if (timerRef.current) clearInterval(timerRef.current);
-    });
+    v.on('call-end', () => setStatus('Disconnected'));
+    v.on('message', (msg:any) => msg.type==='transcript' && setTranscripts((p)=>[...p, `${msg.role}: ${msg.transcript}`]));
+    v.on('error', () => setStatus('Disconnected'));
 
-    v.on('message', (msg: any) => {
-      if (msg.type === 'transcript') {
-        setTranscripts((p) => [...p, `${msg.role}: ${msg.transcript}`]);
-      }
-    });
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => clearInterval(timer.current!);
   }, []);
 
   const startCall = () => {
@@ -59,73 +42,40 @@ export default function Dashboard() {
   };
 
   const endCall = () => {
-    vapiRef.current?.stop();
-    setStatus('Disconnected');
+    if (status === 'Connected') vapiRef.current?.stop();
   };
+
+  const reconnect = () => startCall();
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center p-6">
-      <h1 className="text-4xl font-bold text-blue-800 mb-8">My Dashboard</h1>
-      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md">
-        <div className="flex flex-col items-center text-center">
-          <img src={doctor.avatar} alt={doctor.name} className="w-24 h-24 rounded-full border mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-800">{doctor.name}</h2>
-          <p className="text-gray-500 mb-4">{doctor.specialty}</p>
+      <h1 className="text-4xl font-bold text-blue-800 mb-6">My Dashboard</h1>
 
-          {/* Status Indicator */}
-          <div className="flex items-center gap-2 mb-4">
-            <div
-              className={`w-3 h-3 rounded-full ${
-                status === 'Connected'
-                  ? 'bg-green-500'
-                  : status === 'Connecting'
-                  ? 'bg-yellow-500 animate-pulse'
-                  : 'bg-gray-400'
-              }`}
-            />
+      <div className="bg-white shadow rounded-xl p-8 w-full max-w-md space-y-5">
+        <div className="flex flex-col items-center text-center space-y-2">
+          <img src={doctor.avatar} alt="" className="w-24 h-24 rounded-full border" />
+          <h2 className="text-2xl font-semibold">{doctor.name}</h2>
+          <p className="text-gray-500">{doctor.specialty}</p>
+          <div className="flex items-center space-x-2">
+            <span className={`w-3 h-3 rounded-full ${status==='Connected'?'bg-green-500':status==='Connecting'?'bg-yellow-500 animate-pulse':'bg-gray-400'}`}></span>
             <span className="text-gray-700 font-medium">{status}</span>
           </div>
-
-          {/* Action Buttons */}
-          {status === 'Idle' && (
-            <button
-              onClick={startCall}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
-            >
-              Start Call
-            </button>
-          )}
-          {status === 'Connected' && (
-            <button
-              onClick={endCall}
-              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition"
-            >
-              End Call
-            </button>
-          )}
         </div>
 
-        {/* Call Duration */}
-        {status === 'Connected' && (
-          <div className="text-center mt-3 text-gray-500 font-mono">Duration: {duration}</div>
-        )}
+        <div className="space-y-3">
+          {status==='Idle' && <button onClick={startCall} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Start Call</button>}
+          {status==='Connecting' && <button disabled className="w-full bg-yellow-400 text-white py-2 rounded cursor-wait">Connecting…</button>}
+          {status==='Connected' && <button onClick={endCall} className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700">End Call</button>}
+          {status==='Disconnected' && <button onClick={reconnect} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Reconnect</button>}
+        </div>
 
-        {/* Transcript */}
-        {status !== 'Idle' && (
-          <div className="mt-6 bg-gray-100 p-4 rounded-lg max-h-64 overflow-y-auto space-y-3">
-            {transcripts.length === 0 ? (
-              <p className="text-gray-400 italic">No transcript yet...</p>
-            ) : (
-              transcripts.map((line, idx) => {
-                const [role, ...text] = line.split(':');
-                return (
-                  <div key={idx} className="flex">
-                    <span className="font-semibold text-blue-600 mr-1">{role}:</span>
-                    <p className="text-gray-800">{text.join(':')}</p>
-                  </div>
-                );
-              })
-            )}
+        {status==='Connected' && <div className="text-center text-gray-600 font-mono">⏱ {duration}</div>}
+
+        {(status!=='Idle') && (
+          <div className="max-h-64 overflow-y-auto bg-gray-100 p-4 rounded text-sm space-y-2">
+            {transcripts.length===0 ? <p className="text-gray-400 italic text-center">No transcript yet...</p> : transcripts.map((line,i)=>(
+              <div key={i} className="flex"><span className="font-semibold text-blue-600">{line.split(':')[0]}:</span><span className="ml-1">{line.split(':').slice(1).join(':')}</span></div>
+            ))}
           </div>
         )}
       </div>
